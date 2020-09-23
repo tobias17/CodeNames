@@ -22,8 +22,11 @@ def getWords():
 getWords.words = None
 
 class Tags():
-	EMPTY = 'empty'
-	BLUE = 'blue'
-	RED = 'red'
-	WHITE = 'white'
-	BLACK = 'black'
+	EMPTY = 'Empty'
+	BLUE = 'Blue'
+	RED = 'Red'
+	WHITE = 'White'
+	BLACK = 'Black'
+
+	def invert(tag):
+		return Tags.RED if tag == Tags.BLUE else Tags.BLUE

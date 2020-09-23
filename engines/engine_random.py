@@ -1,5 +1,8 @@
-import random
+import random, time
+from tqdm import tqdm
 
 def getWord(summary):
 	friendly, opposing, white, black = summary
-	return friendly[random.randint(0, len(friendly) - 1)]
+	for i in tqdm(range(10)):
+		time.sleep(0.1)
+	return (friendly[random.randint(0, len(friendly) - 1)], random.randint(1, 1))

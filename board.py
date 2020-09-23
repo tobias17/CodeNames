@@ -25,6 +25,7 @@ class Board():
 			self.board = [Word(word, label) for (word, label) in zip(sample, labels)]
 		else:
 			self.board = board
+		self.startingTeam = Tags.BLUE if len(self.getWords(Tags.BLUE)) > len(self.getWords(Tags.RED)) else Tags.RED
 
 	def getLabelList():
 		labels = []
@@ -43,16 +44,20 @@ class Board():
 	def toString(self, hidden=True):
 		return '\n'.join([' '.join([self.board[x+y*5].toString(hidden) for x in range(5)]) for y in range(5)])
 
-	def getWordsWithTag(self, tag):
-		return [w.word for w in self.board if w.team == tag]
-
-	def getOpposingWords(self, team):
-		return self.getWordsWithTag(Tags.RED if team == Tags.BLUE else Tags.BLUE)
+	def getWords(self, tag):
+		return [w.word for w in self.board if w.team == tag and not w.guessed]
 
 	def getSummary(self, team):
 		return (
-			self.getWordsWithTag(team),
-			self.getOpposingWords(team),
-			self.getWordsWithTag(Tags.WHITE),
-			self.getWordsWithTag(Tags.BLACK),
+			self.getWords(team),
+			self.getWords(Tags.invert(team)),
+			self.getWords(Tags.WHITE),
+			self.getWords(Tags.BLACK),
 		)
+
+	def fetchWord(self, word):
+		wordList = [w for w in self.board if w.word.upper() == word.upper()]
+		if len(wordList) == 0:
+			return None
+		return wordList[0]
+
