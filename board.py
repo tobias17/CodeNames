@@ -1,8 +1,8 @@
-from utils import log, getWords
+from utils import log, getWords, Tags
 import random
 
 class Word():
-	teamChars = {'blue': '<', 'red': '>', 'white': '-', 'black': '*'}
+	teamChars = {Tags.BLUE: '<', Tags.RED: '>', Tags.WHITE: '-', Tags.BLACK: '*'}
 
 	def __init__(self, word, team, guessed=False):
 		self.word = word
@@ -29,14 +29,14 @@ class Board():
 	def getLabelList():
 		labels = []
 		for i in range(8):
-			labels.append('red')
+			labels.append(Tags.RED)
 		for i in range(8):
-			labels.append('blue')
+			labels.append(Tags.BLUE)
 		for i in range(7):
-			labels.append('white')
+			labels.append(Tags.WHITE)
 		for i in range(1):
-			labels.append('black')
-		labels.append('red' if random.randint(0,1) == 0 else 'blue')
+			labels.append(Tags.BLACK)
+		labels.append(Tags.RED if random.randint(0,1) == 0 else Tags.BLUE)
 		random.shuffle(labels)
 		return labels
 
@@ -47,4 +47,12 @@ class Board():
 		return [w.word for w in self.board if w.team == tag]
 
 	def getOpposingWords(self, team):
-		return self.getWordsWithTag('red' if team == 'blue' else 'blue')
+		return self.getWordsWithTag(Tags.RED if team == Tags.BLUE else Tags.BLUE)
+
+	def getSummary(self, team):
+		return (
+			self.getWordsWithTag(team),
+			self.getOpposingWords(team),
+			self.getWordsWithTag(Tags.WHITE),
+			self.getWordsWithTag(Tags.BLACK),
+		)

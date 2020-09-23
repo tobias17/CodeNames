@@ -20,3 +20,10 @@ def getWords():
 			getWords.words = f.read().splitlines()
 	return getWords.words
 getWords.words = None
+
+class Tags():
+	EMPTY = 'empty'
+	BLUE = 'blue'
+	RED = 'red'
+	WHITE = 'white'
+	BLACK = 'black'
