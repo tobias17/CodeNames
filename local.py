@@ -1,7 +1,9 @@
 import random, platform, os
 from utils import log, getWords, Tags
 from board import Board
-from engines.engine_random import getWord
+from engines.engine_stretch import StretchEngine
+
+e = StretchEngine('v2')
 
 def clearScreen():
 	if platform.system() == "Windows":
@@ -20,8 +22,8 @@ def playGame():
 	board = Board()
 	turn = board.startingTeam
 	while True:
-		print('Generating clue...')
-		word, amnt = getWord(board.getSummary(turn))
+		print('Thinking...')
+		word, amnt = e.getWord(board.getSummary(turn))
 		guessRem = amnt + 1
 		while True:
 			clearScreen()
@@ -65,6 +67,7 @@ def playGame():
 
 def main():
 	while True:
+		e.reset()
 		playGame()
 		while True:
 			clearScreen()
@@ -76,4 +79,5 @@ def main():
 
 if __name__ == "__main__":
 	random.seed(100)
+	log.verbosity = 0
 	main()
