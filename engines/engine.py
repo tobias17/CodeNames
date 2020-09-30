@@ -1,8 +1,8 @@
-from utils import loadModel
+from utils import load_model
 
 class Engine():
-    def __init__(self, modelName):
-        self.model = loadModel(modelName)
+    def __init__(self, model_name):
+        self.model = load_model(model_name)
 
     def reset(self):
         pass

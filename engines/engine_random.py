@@ -5,7 +5,7 @@ from tqdm import tqdm
 class RandomEngine(Engine):
     name = 'Random'
     
-    def getWord(self, summary):
+    def gen_word(self, summary):
         friendly, opposing, white, black = summary
         for i in tqdm(range(10)):
             time.sleep(0.1)

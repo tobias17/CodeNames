@@ -1,70 +1,70 @@
 import random, os
-from utils import log, getWords, Tags, clearScreen
+from utils import log, get_words, Tags, clear_screen
 from board import Board
 from engines.engine_stretch import StretchEngine
 
 e = StretchEngine('v2')
 
-def printBoard(board, turn):
-	teamChar = board.board[0].teamChars[turn]
+def print_board(board, turn):
+	team_char = board.board[0].team_chars[turn]
 	print(f'{turn} team\'s turn')
-	print(f'{len(board.getWords(turn))} words remaining (vs {len(board.getWords(Tags.invert(turn)))})')
-	print(teamChar * 13*5 + '\n')
-	print(board.toString(hidden=True))
+	print(f'{len(board.get_words(turn))} words remaining (vs {len(board.get_words(Tags.invert(turn)))})')
+	print(team_char * 13*5 + '\n')
+	print(board.to_string(hidden=True))
 
-def playGame():
+def play_game():
 	board = Board()
-	turn = board.startingTeam
+	turn = board.starting_team
 	while True:
 		print('Thinking...')
-		word, amnt = e.getWord(board.getSummary(turn))
-		guessRem = amnt + 1
+		word, amnt = e.gen_word(board.get_summary(turn))
+		guess_rem = amnt + 1
 		while True:
-			clearScreen()
-			printBoard(board, turn)
+			clear_screen()
+			print_board(board, turn)
 			print(f'\nYour clue is: {word}, {amnt}')
-			guess = input(f'What is your guess ({guessRem} rem)? ')
+			guess = input(f'What is your guess ({guess_rem} rem)? ')
 
 			if guess.lower() in ['done', 'quit']:
 				break
 
-			boardWord = board.fetchWord(guess)
-			if boardWord is None:
+			board_word = board.fetch_word(guess)
+			if board_word is None:
 				input('Word not found on board.')
 				continue
 
-			boardWord.guessed = True
+			board_word.guessed = True
 
-			if boardWord.team == Tags.BLACK:
+			if board_word.team == Tags.BLACK:
 				input(f'Uh oh! You guessed the assassin! {Tags.invert(turn)} team wins!')
 				return
 
-			if boardWord.team == Tags.WHITE:
+			if board_word.team == Tags.WHITE:
 				input('You guess a neutral word.')
 				break
 
-			if boardWord.team == Tags.invert(turn):
+			if board_word.team == Tags.invert(turn):
 				input('You guessed an opposing team\'s word.')
 				break
 
-			if boardWord.team == turn:
-				if len(board.getWords(turn)) == 0:
+			if board_word.team == turn:
+				if len(board.get_words(turn)) == 0:
 					input(f'You got them all! {turn} team has won the game!')
 					return
 				else:
 					input('You guessed it!')
 
-			guessRem -= 1
-			if guessRem <= 0:
+			guess_rem -= 1
+			if guess_rem <= 0:
 				break
 		turn = Tags.invert(turn)
 
 def main():
 	while True:
 		e.reset()
-		playGame()
+		play_game()
 		while True:
-			clearScreen()
+			clear_screen()
 			resp = input('Play another? ([y]es/[n]o) ')
 			if resp.lower() in ['y', 'yes']:
 				break

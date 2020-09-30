@@ -20,12 +20,12 @@ def log(text, verbosity=0):
 log.filename = None
 log.verbosity = 0
 
-def getWords():
-	if getWords.words is None:
+def get_words():
+	if get_words.words is None:
 		with open('words.txt') as f:
-			getWords.words = f.read().splitlines()
-	return getWords.words
-getWords.words = None
+			get_words.words = f.read().splitlines()
+	return get_words.words
+get_words.words = None
 
 class Tags():
 	EMPTY = 'Empty'
@@ -37,17 +37,13 @@ class Tags():
 	def invert(tag):
 		return Tags.RED if tag == Tags.BLUE else Tags.BLUE
 
-def loadModel(name):
-	if name not in loadModel.models:
-		loadModel.models[name] = gensim.models.word2vec.Word2Vec.load(f'models/{name}/word2vec.dat')
-	return loadModel.models[name]
-loadModel.models = {}
+def load_model(name):
+	if name not in load_model.models:
+		load_model.models[name] = gensim.models.word2vec.Word2Vec.load(f'models/{name}/word2vec.dat')
+	return load_model.models[name]
+load_model.models = {}
 
-def getStem(word):
-        """Return the stem of word.
-        """
-        # Hardcode some stemming rules for the default CodeName words
-        # that the wordnet lemmatizer doesn't know about.
+def get_stem(word):
         if word in ("pass", "passing", "passed",):
             return "pass"
         if word in ("microscope", "microscopy"):
@@ -65,10 +61,10 @@ def getStem(word):
             return "theater"
         if word in ("alp", "alps", "apline", "alpinist"):
             return "alp"
-        return getStem.lemmatizer.lemmatize(str(word))#.encode("ascii", "ignore")
-getStem.lemmatizer = nltk.stem.wordnet.WordNetLemmatizer()
+        return get_stem.lemmatizer.lemmatize(str(word))
+get_stem.lemmatizer = nltk.stem.wordnet.WordNetLemmatizer()
 
-def clearScreen():
+def clear_screen():
 	if platform.system() == "Windows":
 		os.system("cls")
 	else:

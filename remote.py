@@ -3,7 +3,7 @@ from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 
 from engines.engine_stretch import StretchEngine
-from utils import Tags, clearScreen, log
+from utils import Tags, clear_screen, log
 from board import Board, Word
 import time, random, sys, logging
 
@@ -11,10 +11,10 @@ e = StretchEngine('v2')
 
 INT_THRESH = 5
 
-def doesIntersect(loc1, loc2):
+def does_intersect(loc1, loc2):
     return abs(loc1['x'] - loc2['x']) < INT_THRESH and abs(loc1['y'] - loc2['y']) < INT_THRESH
 
-def genClue(turn):
+def gen_clue(turn):
     try:
         cover_locs = []
         for cover in driver.find_elements_by_class_name('tokenWrapper'):
@@ -34,16 +34,16 @@ def genClue(turn):
                 tag = Tags.BLACK
             words.append(Word(tile.text, tag))
             for cover_loc in cover_locs:
-                if doesIntersect(cover_loc, tile.location):
+                if does_intersect(cover_loc, tile.location):
                     words[-1].guessed = True
                     break
         board = Board(board=words)
 
-        clearScreen()
-        print(board.toString())
+        clear_screen()
+        print(board.to_string())
 
         print('\nThinking...')
-        word, amnt = e.getWord(board.getSummary(turn))
+        word, amnt = e.gen_word(board.get_summary(turn))
         print(f'\nYour clue is: {word}, {amnt}')
     except Exception as ex:
         print(f'Exception occured in generating a clue -> {ex}')
@@ -66,19 +66,19 @@ def main():
             if 'quit' in text.lower():
                 return
             if 'given' in text.lower():
-                print(f'Given clues: {e.givenClues}')
-        genClue(turn)
+                print(f'Given clues: {e.given_clues}')
+        gen_clue(turn)
 
 if __name__ == "__main__":
     if not len(sys.argv) == 2:
         print(f'Invalid args: python {sys.argv[0]} room_name')
     else:
-        roomName = sys.argv[1]
+        room_name = sys.argv[1]
         chrome_options = Options()
         chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
         driver = webdriver.Chrome(ChromeDriverManager().install(), chrome_options=chrome_options)
 
-        driver.get(f'https://codenames.game/room/{roomName}')
+        driver.get(f'https://codenames.game/room/{room_name}')
 
         print('')
         time.sleep(1)

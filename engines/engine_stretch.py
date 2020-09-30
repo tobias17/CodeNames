@@ -8,18 +8,18 @@ import numpy as np
 class StretchEngine(Engine):
     name = 'Stretch'
 
-    def __init__(self, modelName):
-        super().__init__(modelName)
+    def __init__(self, model_name):
+        super().__init__(model_name)
         self.reset()
 
     def reset(self):
-        self.givenClues = []
+        self.given_clues = []
 
     def undo(self):
-        if len(self.givenClues) > 0:
-            self.givenClues = self.givenClues[:-1]
+        if len(self.given_clues) > 0:
+            self.given_clues = self.given_clues[:-1]
 
-    def getWord(self, summary):
+    def gen_word(self, summary):
         saved_clues, best_score = self.get_clue_list_pair_stretch(summary)
 
         num_clues = len(saved_clues)
@@ -27,7 +27,7 @@ class StretchEngine(Engine):
 
         clue, words = saved_clues[order[0]]
         clue_str = str(clue)[2:-1]
-        self.givenClues.append(clue_str)
+        self.given_clues.append(clue_str)
         return clue_str, len(words)
         
     def get_clue_list_pair_stretch(self, summary, max_group=2, does_stretch=[2]):
@@ -78,7 +78,7 @@ class StretchEngine(Engine):
 
         # Initialize the list of illegal clues.
         illegal_words = list(pos_words) + list(neg_words) + list(veto_words)
-        illegal_stems = set([utils.getStem(word) for word in illegal_words])
+        illegal_stems = set([utils.get_stem(word) for word in illegal_words])
 
         clue_vectors = np.asarray([self.model[word.lower().replace(' ', '_')] for word in clue_words])
 
@@ -100,12 +100,12 @@ class StretchEngine(Engine):
                     utils.log(f'num skipped {clue_str}')
                     continue
 
-            if clue_str in self.givenClues:
+            if clue_str in self.given_clues:
                 continue
 
             # clue = self.model.index2word[clue_index]
             # Ignore clues with the same stem as an illegal clue.
-            if utils.getStem(clue) in illegal_stems:
+            if utils.get_stem(clue) in illegal_stems:
                 continue
             # Ignore clues that are contained within an illegal clue or
             # vice versa.
