@@ -1,4 +1,4 @@
-import os, time
+import os, time, platform
 import nltk.stem.wordnet
 
 import warnings
@@ -67,3 +67,9 @@ def getStem(word):
             return "alp"
         return getStem.lemmatizer.lemmatize(str(word))#.encode("ascii", "ignore")
 getStem.lemmatizer = nltk.stem.wordnet.WordNetLemmatizer()
+
+def clearScreen():
+	if platform.system() == "Windows":
+		os.system("cls")
+	else:
+		sys.stdout.write(chr(27) + "[2J")

@@ -4,10 +4,7 @@ from tqdm import tqdm
 
 class RandomEngine(Engine):
     name = 'Random'
-
-    def reset(self):
-        pass
-
+    
     def getWord(self, summary):
         friendly, opposing, white, black = summary
         for i in tqdm(range(10)):

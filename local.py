@@ -1,15 +1,9 @@
-import random, platform, os
-from utils import log, getWords, Tags
+import random, os
+from utils import log, getWords, Tags, clearScreen
 from board import Board
 from engines.engine_stretch import StretchEngine
 
 e = StretchEngine('v2')
-
-def clearScreen():
-	if platform.system() == "Windows":
-		os.system("cls")
-	else:
-		sys.stdout.write(chr(27) + "[2J")
 
 def printBoard(board, turn):
 	teamChar = board.board[0].teamChars[turn]

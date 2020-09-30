@@ -8,8 +8,16 @@ import numpy as np
 class StretchEngine(Engine):
     name = 'Stretch'
 
+    def __init__(self, modelName):
+        super().__init__(modelName)
+        self.reset()
+
     def reset(self):
         self.givenClues = []
+
+    def undo(self):
+        if len(self.givenClues) > 0:
+            self.givenClues = self.givenClues[:-1]
 
     def getWord(self, summary):
         saved_clues, best_score = self.get_clue_list_pair_stretch(summary)
