@@ -14,103 +14,141 @@ INT_THRESH = 5
 def does_intersect(loc1, loc2):
     return abs(loc1['x'] - loc2['x']) < INT_THRESH and abs(loc1['y'] - loc2['y']) < INT_THRESH
 
-def gen_clue(turn, driver, swap_teams):
-    try:
-        if swap_teams:
-            switch_teams(driver)
 
-        cover_locs = []
-        for cover in driver.find_elements_by_class_name('tokenWrapper'):
-            cover_locs.append(cover.location)
+class WebDriver():
 
-        words = []
-        for tile in driver.find_elements_by_class_name('card'):
-            classes = tile.get_attribute('class')
-            tag = Tags.EMPTY
-            if 'red' in classes:
-                tag = Tags.RED
-            elif 'blue' in classes:
-                tag = Tags.BLUE
-            elif 'gray' in classes:
-                tag = Tags.WHITE
-            elif 'black' in classes:
-                tag = Tags.BLACK
-            words.append(Word(tile.text, tag))
-            for cover_loc in cover_locs:
-                if does_intersect(cover_loc, tile.location):
-                    words[-1].guessed = True
-                    break
-        board = Board(board=words)
+    def __init__(self, site):
+        chrome_options = Options()
+        chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
+        self.driver = webdriver.Chrome(ChromeDriverManager().install(), chrome_options=chrome_options)
 
-        clear_screen()
-        print(board.to_string())
+        self.driver.get(site)
 
-        print('\nThinking...')
-        word, amnt = e.gen_word(board.get_summary(turn))
-        print(f'\nYour clue is: {word}, {amnt}')
+    def quit(self):
+        self.driver.close()
 
-        input_boxes = driver.find_elements_by_name('clue')
-        if len(input_boxes) == 0:
-            print('input box not found')
-            return
-        input_boxes[0].send_keys(word)
+    def gen_clue(self, turn, swap_teams, send_clue):
+        try:
+            if swap_teams:
+                self.switch_teams()
 
-        amount_box = driver.find_element_by_class_name('numberSelectWrapper')
-        amount_box.click()
-        [b for b in amount_box.find_elements_by_class_name('option') if b.text == str(amnt)][0].click()
+            cover_locs = []
+            for cover in self.driver.find_elements_by_class_name('tokenWrapper'):
+                cover_locs.append(cover.location)
 
-        time.sleep(0.5)
-        driver.find_element_by_class_name('jsx-1776081540').click()
+            words = []
+            for tile in self.driver.find_elements_by_class_name('card'):
+                classes = tile.get_attribute('class')
+                tag = Tags.EMPTY
+                if 'red' in classes:
+                    tag = Tags.RED
+                elif 'blue' in classes:
+                    tag = Tags.BLUE
+                elif 'gray' in classes:
+                    tag = Tags.WHITE
+                elif 'black' in classes:
+                    tag = Tags.BLACK
+                words.append(Word(tile.text, tag))
+                for cover_loc in cover_locs:
+                    if does_intersect(cover_loc, tile.location):
+                        words[-1].guessed = True
+                        break
+            board = Board(board=words)
 
-    except Exception as ex:
-        print(f'Exception occured in generating a clue -> {ex}')
+            clear_screen()
+            print(board.to_string())
 
-def init(driver):
-    red_team_board = driver.find_element_by_id('teamBoard-red')
-    red_buttons = red_team_board.find_elements_by_class_name('jsx-198695588')
-    red_buttons[4].click()
-    print('inited to the read team')
+            print('\nThinking...')
+            word, amnt = e.gen_word(board.get_summary(turn))
+            print(f'\nYour clue is: {word}, {amnt}')
+            print(f'given clues: {e.given_clues}')
 
-def switch_teams(driver):
-    driver.find_element_by_class_name('jsx-3037563900').click()
-    driver.find_element_by_class_name('jsx-445627889').click()
+            if not send_clue:
+                return
+
+            input_boxes = self.driver.find_elements_by_name('clue')
+            if len(input_boxes) == 0:
+                print('input box not found')
+                return
+            input_boxes[0].send_keys(word)
+
+            amount_box = self.driver.find_element_by_class_name('numberSelectWrapper')
+            amount_box.click()
+            [b for b in amount_box.find_elements_by_class_name('option') if b.text == str(amnt)][0].click()
+
+            time.sleep(1)
+            self.driver.find_element_by_class_name('jsx-1776081540').click()
+
+        except Exception as ex:
+            print(f'Exception occured in generating a clue -> {ex}')
+
+    def init(self):
+        red_team_board = self.driver.find_element_by_id('teamBoard-red')
+        red_team_board.find_elements_by_class_name('jsx-198695588')[4].click()
+        print('inited to the read team')
+
+    def reset(self, team_is_on):
+        red_team_board = self.driver.find_element_by_id(f'teamBoard-{team_is_on.lower()}')
+        red_team_board.find_element_by_class_name('jsx-198695588').click()
+        print(f'joined as spymaster on team {team_is_on}')
+
+    def switch_teams(self):
+        self.driver.find_element_by_class_name('jsx-3037563900').click()
+        self.driver.find_element_by_class_name('jsx-445627889').click()
+
 
 def main(driver):
     team_is_on = Tags.EMPTY
     while True:
-        text = input('What would you like to do? ')
-        if 'red' in text.lower() or 'blue' in text.lower():
+        text = input('What would you like to do? ').lower().strip()
+        if 'red' == text or 'blue' == text:
             if team_is_on == Tags.EMPTY:
                 print('Please init first')
             else:
-                turn = Tags.RED if 'red' in text.lower() else Tags.BLUE
-                gen_clue(turn, driver, team_is_on != turn)
+                turn = Tags.RED if 'red' in text else Tags.BLUE
+                driver.gen_clue(turn, team_is_on != turn, True)
                 team_is_on = turn
-                continue
-        if 'reset' in text.lower():
+        elif 'reset' == text:
             e.reset()
-            print('engine reset')
-            continue
-        if 'quit' in text.lower():
+            driver.reset(team_is_on)
+            print('done reseting')
+        elif 'quit' == text:
             return
-        if 'given' in text.lower():
-            print(f'Given clues: {e.given_clues}')
-            continue
-        if 'init' in text.lower():
-            init(driver)
-            team_is_on = Tags.RED
-            continue
+        elif 'given' == text:
+            e.print_state()
+        elif 'undo' == text:
+            e.undo()
+            e.print_state()
+        elif 'init' == text:
+            if team_is_on == Tags.EMPTY:
+                driver.init()
+                team_is_on = Tags.RED
+            else:
+                print(f'Currently on team {team_is_on}')
+        elif text.startswith('set '):
+            text = text[4:]
+            if text.startswith('team '):
+                text = text[5:]
+                if text == 'red':
+                    team_is_on = Tags.RED
+                    print('Switched to Red team')
+                elif text == 'blue':
+                    team_is_on = Tags.BLUE
+                    print('Switched to Blue team')
+                elif text == 'empty':
+                    team_is_on = Tags.EMPTY
+                    print('Cleared team var')
+                else:
+                    print('Invalid format: set team [red/blue/empty]')
+            else:
+                print('Invalid format: set [team] value')
 
 if __name__ == "__main__":
     if not len(sys.argv) == 2:
         print(f'Invalid args: python {sys.argv[0]} room_name')
     else:
         room_name = sys.argv[1]
-        chrome_options = Options()
-        chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
-        driver = webdriver.Chrome(ChromeDriverManager().install(), chrome_options=chrome_options)
-
-        driver.get(f'https://codenames.game/room/{room_name}')
+        driver = WebDriver(f'https://codenames.game/room/{room_name}')
 
         print('')
         time.sleep(1)
@@ -119,4 +157,5 @@ if __name__ == "__main__":
         log.verbosity = 0
 
         main(driver)
-        driver.close()
+
+        driver.quit()

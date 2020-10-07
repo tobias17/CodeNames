@@ -19,6 +19,9 @@ class StretchEngine(Engine):
         if len(self.given_clues) > 0:
             self.given_clues = self.given_clues[:-1]
 
+    def print_state(self):
+        print(f'Given clues: {self.given_clues}')
+
     def gen_word(self, summary):
         saved_clues, best_score = self.get_clue_list_pair_stretch(summary)
 
