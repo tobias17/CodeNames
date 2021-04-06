@@ -79,38 +79,51 @@ class WebDriver():
             time.sleep(1)
             self.driver.find_element_by_class_name('jsx-1776081540').click()
 
-        except Exception as ex:
-            print(f'Exception occured in generating a clue -> {ex}')
+            except Exception as ex:
+                print(f'Exception occured in generating a clue -> {ex}')
 
     def init(self):
-        red_team_board = self.driver.find_element_by_id('teamBoard-red')
-        red_team_board.find_elements_by_class_name('jsx-198695588')[4].click()
-        print('inited to the read team')
+        try:
+            red_team_board = self.driver.find_element_by_id('teamBoard-red')
+            red_team_board.find_elements_by_class_name('jsx-198695588')[4].click()
+            print('inited to the red team')
+            return True
+        except Exception as ex:
+            print(f'Exception occured in initializing -> {ex}')
 
     def reset(self, team_is_on):
-        red_team_board = self.driver.find_element_by_id(f'teamBoard-{team_is_on.lower()}')
-        red_team_board.find_element_by_class_name('jsx-198695588').click()
-        print(f'joined as spymaster on team {team_is_on}')
+        try:
+            red_team_board = self.driver.find_element_by_id(f'teamBoard-{team_is_on.lower()}')
+            red_team_board.find_element_by_class_name('jsx-198695588').click()
+            print(f'joined as spymaster on team {team_is_on}')
+        except Exception as ex:
+            print(f'Exception occured in reseting the game -> {ex}')
 
     def switch_teams(self):
-        self.driver.find_element_by_class_name('jsx-3037563900').click()
-        self.driver.find_element_by_class_name('jsx-445627889').click()
+        try:
+            self.driver.find_element_by_class_name('jsx-3037563900').click()
+            self.driver.find_element_by_class_name('jsx-445627889').click()
+        except Exception as ex:
+            print(f'Exception occured in switching teams -> {ex}')
 
 
-def main(driver):
+def main(webdriver):
     team_is_on = Tags.EMPTY
     while True:
         text = input('What would you like to do? ').lower().strip()
-        if 'red' == text or 'blue' == text:
+        if 'red' == text or 'blue' == text or 'gen' == text:
             if team_is_on == Tags.EMPTY:
                 print('Please init first')
             else:
-                turn = Tags.RED if 'red' in text else Tags.BLUE
-                driver.gen_clue(turn, team_is_on != turn, True)
+                if 'gen' == text:
+                    turn = Tags.invert(turn)
+                else:
+                    turn = Tags.RED if 'red' in text else Tags.BLUE
+                webdriver.gen_clue(turn, team_is_on != turn, True)
                 team_is_on = turn
         elif 'reset' == text:
             e.reset()
-            driver.reset(team_is_on)
+            webdriver.reset(team_is_on)
             print('done reseting')
         elif 'quit' == text:
             return
@@ -121,8 +134,8 @@ def main(driver):
             e.print_state()
         elif 'init' == text:
             if team_is_on == Tags.EMPTY:
-                driver.init()
-                team_is_on = Tags.RED
+                if webdriver.init():
+                    team_is_on = Tags.RED
             else:
                 print(f'Currently on team {team_is_on}')
         elif text.startswith('set '):
@@ -148,7 +161,7 @@ if __name__ == "__main__":
         print(f'Invalid args: python {sys.argv[0]} room_name')
     else:
         room_name = sys.argv[1]
-        driver = WebDriver(f'https://codenames.game/room/{room_name}')
+        webdriver = WebDriver(f'https://codenames.game/room/{room_name}')
 
         print('')
         time.sleep(1)
@@ -156,6 +169,9 @@ if __name__ == "__main__":
         random.seed(100)
         log.verbosity = 0
 
-        main(driver)
+        main(webdriver)
 
-        driver.quit()
+        try:
+            webdriver.quit()
+        except Exception as ex:
+            print(f'Error in quitting -> {ex}')

@@ -20,9 +20,9 @@ def log(text, verbosity=0):
 log.filename = None
 log.verbosity = 0
 
-def get_words():
+def get_words(prefix=''):
 	if get_words.words is None:
-		with open('words.txt') as f:
+		with open(f'{prefix}words.txt') as f:
 			get_words.words = f.read().splitlines()
 	return get_words.words
 get_words.words = None

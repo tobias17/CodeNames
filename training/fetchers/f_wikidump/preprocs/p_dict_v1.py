@@ -1,4 +1,4 @@
-import re
+import re, os
 from time import time
 
 class Node():
@@ -22,14 +22,15 @@ class Node():
         return False
 
 
-class PreDict():
-    name = 'p-dict'
+class PreProc():
+    name = 'p_dict_v1'
+    parent = 'f_wikidump'
 
     start_kill_chars = ['<', '*', '|', '{', '[', '}', '-', ':', '=', ';', '!', '&lt;', 'File:']
     strip_strings = ['&quot;', '&amp;', "'", ':', ',', '.', '|', '[', ']']
 
     def __init__(self):
-        with open('dict.txt') as f:
+        with open('preprocs/dict_v1.txt') as f:
             self.dict = f.read().split()
         self.root_node = Node()
         for word in self.dict:
@@ -48,7 +49,7 @@ class PreDict():
         line = re.sub('[^a-z ]', '', line)
 
         ret_val = []
-        for word in line.split():
+        for word in line.split(' '):
             if self.root_node.contains(word):
                 ret_val.append(word)
 
@@ -56,28 +57,3 @@ class PreDict():
             return ''
 
         return ' '.join(ret_val)
-
-    def old_clean(self, line):
-        t0 = time()
-        line = line.strip()
-
-        t1 = time()
-        for start_kill_char in self.start_kill_chars:
-            if line.startswith(start_kill_char):
-                return '', (t0, t1, time(), time(), time())
-
-        t2 = time()
-        line = line.lower()
-        line = re.sub('[;:\-]', ' ', line)
-        line = re.sub('[^a-z ]', '', line)
-
-        t3 = time()
-        ret_val = []
-        for word in line.split():
-            if word in self.dict:
-                ret_val.append(word)
-
-        if len(ret_val) <= 5:
-            return '', (t0, t1, t2, t3, time())
-
-        return ' '.join(ret_val), (t0, t1, t2, t3, time())
