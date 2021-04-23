@@ -1,8 +1,11 @@
 logs/
 training/corpus
 .vscode
+
 *.log
-__pycache__
+*.pyc
+*~
+*.swp
 
 models/*
 !models/*.py
