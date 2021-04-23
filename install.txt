@@ -1,0 +1,5 @@
+selenium @ file:///C:/ci/selenium_1594408106746/work
+tqdm @ file:///tmp/build/80754af9/tqdm_1615925068909/work
+webdriver-manager==3.4.0
+nltk @ file:///tmp/build/80754af9/nltk_1618327084230/work
+gensim @ file:///C:/ci/gensim_1613994638799/work

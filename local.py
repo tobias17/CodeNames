@@ -1,9 +1,9 @@
 import random, os
-from utils import log, get_words, Tags, clear_screen
+from utils import log, LogTypes, get_words, Tags, clear_screen
 from board import Board
 from engines.engine_stretch import StretchEngine
 
-e = StretchEngine('v2')
+e = StretchEngine('v3')
 
 def print_board(board, turn):
 	team_char = board.board[0].team_chars[turn]
@@ -74,4 +74,8 @@ def main():
 if __name__ == "__main__":
 	random.seed(100)
 	log.verbosity = 0
+	log.types = [
+		LogTypes.AiReasoning,
+		# LogTypes.AiDebug,
+	]
 	main()

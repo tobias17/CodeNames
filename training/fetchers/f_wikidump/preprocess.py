@@ -1,7 +1,7 @@
 from preprocs.p_dict_v2 import PreProc
 import os, json, hashlib, sys, bz2, gzip
 from time import time, sleep
-from multiprocessing import *
+from multiprocessing import Pool
 
 load_location = f'../../corpus/f_wikidump'
 save_location = f'{load_location}-{PreProc.name}'

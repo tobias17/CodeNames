@@ -1,4 +1,8 @@
-models/
 logs/
 training/corpus
 .vscode
+*.log
+__pycache__
+
+models/*
+!models/*.py

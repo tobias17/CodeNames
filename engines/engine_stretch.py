@@ -4,12 +4,14 @@ from tqdm import tqdm
 import utils
 import itertools
 import numpy as np
+import re
 
 class StretchEngine(Engine):
     name = 'Stretch'
 
-    def __init__(self, model_name):
-        super().__init__(model_name)
+    def __init__(self, model_name, filename='word2vec', word_suffix=False):
+        super().__init__(model_name, filename)
+        self.word_suffix = word_suffix
         self.reset()
 
     def reset(self):
@@ -30,6 +32,10 @@ class StretchEngine(Engine):
 
         clue, words = saved_clues[order[0]]
         clue_str = str(clue)[2:-1]
+        utils.log(f'Clue: {clue.decode()} -> Words: {words}', logtype=utils.LogTypes.AiReasoning)
+        for i in range(min(10, len(saved_clues))):
+            ct10, wt10 = saved_clues[order[i]]
+            utils.log(f'Score: {best_score[order[i]]}, Clue: {ct10.decode()} -> Words: {wt10}', logtype=utils.LogTypes.AiTop10)
         self.given_clues.append(clue_str)
         return clue_str, len(words)
         
@@ -74,16 +80,17 @@ class StretchEngine(Engine):
         veto_margin=0.2,
         num_search=100,
     ):
-        utils.log(f'CLUE: {clue_words}', verbosity=2)
-        utils.log(f' POS: {pos_words}', verbosity=2)
-        utils.log(f' NEG: {neg_words}', verbosity=2)
-        utils.log(f'VETO: {veto_words}', verbosity=2)
+        utils.log(f'CLUE: {clue_words}', logtype=utils.LogTypes.AiDebug)
+        utils.log(f' POS: {pos_words}', logtype=utils.LogTypes.AiDebug)
+        utils.log(f' NEG: {neg_words}', logtype=utils.LogTypes.AiDebug)
+        utils.log(f'VETO: {veto_words}', logtype=utils.LogTypes.AiDebug)
 
         # Initialize the list of illegal clues.
         illegal_words = list(pos_words) + list(neg_words) + list(veto_words)
         illegal_stems = set([utils.get_stem(word) for word in illegal_words])
 
-        clue_vectors = np.asarray([self.model[word.lower().replace(' ', '_')] for word in clue_words])
+        suffix = '_NOUN' if self.word_suffix else ''
+        clue_vectors = np.asarray([self.model[word.lower().replace(' ', '_')+suffix] for word in clue_words])
 
         mean_vector = clue_vectors.mean(axis=0)
         mean_vector /= np.sqrt(mean_vector.dot(mean_vector))
@@ -97,18 +104,21 @@ class StretchEngine(Engine):
             clue_str, dist = closest[i]
             clue_str = clue_str.lower()
             clue = clue_str.encode()
+            utils.log(f'Evaluating: {clue_str}, {dist}', logtype=utils.LogTypes.AiDebug)
 
-            for i in range(10):
-                if str(i) in clue_str:
-                    utils.log(f'num skipped {clue_str}')
+            for j in range(10):
+                if str(j) in clue_str:
+                    utils.log('  num skipped', logtype=utils.LogTypes.AiDebug)
                     continue
 
             if clue_str in self.given_clues:
+                utils.log('  already given', logtype=utils.LogTypes.AiDebug)
                 continue
 
             # clue = self.model.index2word[clue_index]
             # Ignore clues with the same stem as an illegal clue.
             if utils.get_stem(clue) in illegal_stems:
+                utils.log('  illegal stem', logtype=utils.LogTypes.AiDebug)
                 continue
             # Ignore clues that are contained within an illegal clue or
             # vice versa.
@@ -118,12 +128,15 @@ class StretchEngine(Engine):
                     contained = True
                     break
             if contained:
+                utils.log('  illegal contained', logtype=utils.LogTypes.AiDebug)
                 continue
             # Manual override of clues not to give
             # TODO: make this not terrible, abstract out to file
             if clue_str not in self.model:
-                # print('BREAK! BREAK! {}'.format(str(clue)[2:-1]))
+                utils.log('  word not in model', logtype=utils.LogTypes.AiDebug)
                 continue
+            else:
+                utils.log('  FOUND IN MODEL', logtype=utils.LogTypes.AiDebug)
             # Calculate the cosine similarity of this clue with all of the
             # positive, negative and veto words.
             clue_vector = self.model[clue_str]
