@@ -14,6 +14,9 @@ MODEL_NAME = 'dict'
 
 N_WORKERS = 24
 N_EPOCHS = 5
+N_RUNS = 10
+ALPHA_BASE = 0.0001
+ALPHA_PER_RUN = 0.005
 MIN_COUNT = 150
 DIMENSIONS = 300
 MAX_DISTANCE = 5
@@ -78,8 +81,8 @@ def train(corpus_path, npass):
 
     text = gensim.models.word2vec.LineSentence(corpus_path)
 
-    alpha_start = 0.025 - 0.005 * (npass - 1.) + 0.0001
-    alpha_stop = 0.025 - 0.005 * npass + 0.0001
+    alpha_start = ALPHA_BASE + (N_RUNS - npass - 1) * ALPHA_PER_RUN #0.025 - 0.005 * (npass - 1.) + 0.0001
+    alpha_stop  = ALPHA_BASE + (N_RUNS - npass) * ALPHA_PER_RUN #0.025 - 0.005 * npass + 0.0001
     if alpha_stop <= 0:
         print('Invalid npass gives negative learning rate')
         return

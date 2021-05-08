@@ -1,6 +1,8 @@
 logs/
 training/corpus
 .vscode
+testing.py
+playground.ipynb
 
 *.log
 *.pyc

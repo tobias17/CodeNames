@@ -1,4 +1,4 @@
-from preprocs.p_dict_v2 import PreProc
+from preprocs.p_dict_v3 import PreProc
 import os, json, hashlib, sys, bz2, gzip
 from time import time, sleep
 from multiprocessing import Pool

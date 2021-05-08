@@ -2,8 +2,24 @@ import random, os
 from utils import log, LogTypes, get_words, Tags, clear_screen
 from board import Board
 from engines.engine_stretch import StretchEngine
+from engines.engine_heuristic import HeuristicEngine
+from models.association_models import BasicModel, PosTaggedModel, NaiveModel, CombinedModel
 
-e = StretchEngine('v3')
+
+# models = [
+# 	PosTaggedModel('1', purge_tags_to=2),
+# 	PosTaggedModel('29', purge_tags_to=2),
+# 	BasicModel('82', name='model.bin', binary=True),
+# 	PosTaggedModel('200', purge_tags_to=2),
+# ]
+# model = CombinedModel(models, selectCrit=CombinedModel.SELECT_AVERAGE)
+
+# model = NaiveModel()
+
+model = PosTaggedModel('200', purge_tags_to=2)
+
+engine = HeuristicEngine(model, 'models/word_dict.txt')
+
 
 def print_board(board, turn):
 	team_char = board.board[0].team_chars[turn]
@@ -17,12 +33,13 @@ def play_game():
 	turn = board.starting_team
 	while True:
 		print('Thinking...')
-		word, amnt = e.gen_word(board.get_summary(turn))
+		log(board.to_string(hidden=False).replace('\n', ' '), logtype=LogTypes.BoardDump)
+		word, amnt = engine.gen_word(board.get_summary(turn))
 		guess_rem = amnt + 1
 		while True:
 			clear_screen()
 			print_board(board, turn)
-			print(f'\nYour clue is: {word}, {amnt}')
+			print(f'\nYour clue is: {word.upper()}, {amnt}')
 			guess = input(f'What is your guess ({guess_rem} rem)? ')
 
 			if guess.lower() in ['done', 'quit']:
@@ -31,6 +48,9 @@ def play_game():
 			board_word = board.fetch_word(guess)
 			if board_word is None:
 				input('Word not found on board.')
+				continue
+			if board_word.guessed:
+				input('Word has already been guessed.')
 				continue
 
 			board_word.guessed = True
@@ -44,6 +64,9 @@ def play_game():
 				break
 
 			if board_word.team == Tags.invert(turn):
+				if len(board.get_words(Tags.invert(turn))) == 0:
+					input(f'You guessed the last opposing team\'s word! {Tags.invert(turn)} team has won the game!')
+					return
 				input('You guessed an opposing team\'s word.')
 				break
 
@@ -61,21 +84,23 @@ def play_game():
 
 def main():
 	while True:
-		e.reset()
+		engine.reset()
 		play_game()
 		while True:
 			clear_screen()
-			resp = input('Play another? ([y]es/[n]o) ')
+			resp = input('Play another? (yes/no) ')
 			if resp.lower() in ['y', 'yes']:
 				break
 			if resp.lower() in ['n', 'no']:
 				return
 
 if __name__ == "__main__":
-	random.seed(100)
+	# random.seed(100)
 	log.verbosity = 0
 	log.types = [
 		LogTypes.AiReasoning,
+		# LogTypes.AiTop10,
+		# LogTypes.BoardDump,
 		# LogTypes.AiDebug,
 	]
 	main()

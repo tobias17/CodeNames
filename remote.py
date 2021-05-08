@@ -4,14 +4,29 @@ from webdriver_manager.chrome import ChromeDriverManager
 from training.train import EpochLogger
 
 from engines.engine_stretch import StretchEngine
+from engines.engine_heuristic import HeuristicEngine
 from utils import Tags, clear_screen, log, LogTypes
 from board import Board, Word
+from models.association_models import BasicModel, PosTaggedModel, NaiveModel, CombinedModel
 import time, random, sys
 
-e = StretchEngine('v3')
+
+# models = [
+# 	PosTaggedModel('1', purge_tags_to=2),
+# 	PosTaggedModel('29', purge_tags_to=2),
+# 	BasicModel('82', name='model.bin', binary=True),
+# 	PosTaggedModel('200', purge_tags_to=2),
+# ]
+# model = CombinedModel(models, selectCrit=CombinedModel.SELECT_AVERAGE)
+
+# model = NaiveModel()
+
+model = PosTaggedModel('200', purge_tags_to=2)
+
+engine = HeuristicEngine(model, 'models/word_dict.txt')
+
 
 INT_THRESH = 5
-
 def does_intersect(loc1, loc2):
     return abs(loc1['x'] - loc2['x']) < INT_THRESH and abs(loc1['y'] - loc2['y']) < INT_THRESH
 
@@ -71,9 +86,9 @@ class WebDriver():
             print(board.to_string())
 
             print('\nThinking...')
-            word, amnt = e.gen_word(board.get_summary(turn))
+            word, amnt = engine.gen_word(board.get_summary(turn))
             print(f'\nYour clue is: {word}, {amnt}')
-            print(f'given clues: {e.given_clues}')
+            print(f'given clues: {engine.given_clues}')
 
             if not send_clue:
                 return
@@ -86,7 +101,7 @@ class WebDriver():
 
             amount_box = self.driver.find_element_by_class_name('numSelect-wrapper')
             amount_box.click()
-            time.sleep(0.5)
+            time.sleep(1.0)
             [b for b in amount_box.find_elements_by_class_name('option') if b.text == str(amnt)][0].click()
 
             time.sleep(0.5)
@@ -106,7 +121,7 @@ class WebDriver():
 
     def reset(self, team_is_on):
         try:
-            self.driver.find_elements_by_class_name('jsx-1698142436')[0].click()
+            self.driver.find_elements_by_class_name('jsx-1698142436')[1].click()
             print(f'joined as spymaster on team {team_is_on}')
         except Exception as ex:
             print(f'Exception occured in reseting the game -> {ex}')
@@ -134,16 +149,16 @@ def main(webdriver):
                 webdriver.gen_clue(turn, team_is_on != turn, True)
                 team_is_on = turn
         elif 'reset' == text:
-            e.reset()
+            engine.reset()
             webdriver.reset(team_is_on)
             print('done reseting')
         elif 'quit' == text:
             return
         elif 'given' == text:
-            e.print_state()
+            print(f'given clues: {engine.given_clues}')
         elif 'undo' == text:
-            e.undo()
-            e.print_state()
+            engine.undo()
+            print(f'given clues: {engine.given_clues}')
         elif 'init' == text:
             if team_is_on == Tags.EMPTY:
                 if webdriver.init():
@@ -182,8 +197,9 @@ if __name__ == "__main__":
         log.verbosity = 0
         log.types = [
             LogTypes.AiReasoning,
-            # LogTypes.AiDebug,
             # LogTypes.AiTop10,
+            # LogTypes.BoardDump,
+            # LogTypes.AiDebug,
         ]
 
         main(webdriver)

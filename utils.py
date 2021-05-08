@@ -1,16 +1,11 @@
 import os, time, platform
 import nltk.stem.wordnet
 
-import warnings
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore", UserWarning)
-    import gensim
-    from gensim.models.keyedvectors import KeyedVectors
-
 class LogTypes():
     AiReasoning = 'AiReasoning'
     AiDebug = 'AiDebug'
     AiTop10 = 'AiTop10'
+    BoardDump = 'BoardDump'
 
 def log(text, verbosity=0, logtype=None):
     tag = ''
@@ -49,16 +44,6 @@ class Tags():
 
     def invert(tag):
         return Tags.RED if tag == Tags.BLUE else Tags.BLUE
-
-def load_model(name, filename):
-    if name not in load_model.models:
-        if filename.endswith('.bin'):
-            load_model.models[name] = KeyedVectors.load_word2vec_format(f'models/{name}/{filename}', binary=True)
-
-        else:
-            load_model.models[name] = gensim.models.word2vec.Word2Vec.load(f'models/{name}/{filename}')
-    return load_model.models[name]
-load_model.models = {}
 
 def get_stem(word):
         if word in ("pass", "passing", "passed",):

@@ -1,5 +1,5 @@
 from engines.engine import Engine
-import random, time
+import random, time, os
 from tqdm import tqdm
 import utils
 import itertools
@@ -9,10 +9,10 @@ import re
 class StretchEngine(Engine):
     name = 'Stretch'
 
-    def __init__(self, model_name, filename='word2vec', word_suffix=False):
-        super().__init__(model_name, filename)
-        self.word_suffix = word_suffix
+    def __init__(self, model, allowed_clues_path=None):
+        self.model = model
         self.reset()
+        self.load_allowed_clues(allowed_clues_path)
 
     def reset(self):
         self.given_clues = []
@@ -31,13 +31,12 @@ class StretchEngine(Engine):
         order = sorted(range(num_clues), key=lambda k: best_score[k], reverse=True)
 
         clue, words = saved_clues[order[0]]
-        clue_str = str(clue)[2:-1]
-        utils.log(f'Clue: {clue.decode()} -> Words: {words}', logtype=utils.LogTypes.AiReasoning)
+        utils.log(f'Clue: {clue} -> Words: {words}', logtype=utils.LogTypes.AiReasoning)
         for i in range(min(10, len(saved_clues))):
             ct10, wt10 = saved_clues[order[i]]
-            utils.log(f'Score: {best_score[order[i]]}, Clue: {ct10.decode()} -> Words: {wt10}', logtype=utils.LogTypes.AiTop10)
-        self.given_clues.append(clue_str)
-        return clue_str, len(words)
+            utils.log(f'Score: {best_score[order[i]]}, Clue: {ct10} -> Words: {wt10}', logtype=utils.LogTypes.AiTop10)
+        self.given_clues.append(clue)
+        return clue, len(words)
         
     def get_clue_list_pair_stretch(self, summary, max_group=2, does_stretch=[2]):
         friendly, opposing, white, black = [np.array(s) for s in summary]
@@ -88,112 +87,108 @@ class StretchEngine(Engine):
         # Initialize the list of illegal clues.
         illegal_words = list(pos_words) + list(neg_words) + list(veto_words)
         illegal_stems = set([utils.get_stem(word) for word in illegal_words])
-
-        suffix = '_NOUN' if self.word_suffix else ''
-        clue_vectors = np.asarray([self.model[word.lower().replace(' ', '_')+suffix] for word in clue_words])
-
-        mean_vector = clue_vectors.mean(axis=0)
-        mean_vector /= np.sqrt(mean_vector.dot(mean_vector))
-
-        closest = self.model.most_similar(positive=[mean_vector], topn=num_search)
+        
+        clues_tags = [self.model.get_tags(word.lower().replace(' ', '_')) for word in clue_words]
 
         best_clue = None
         best_stretch = []
         max_min_cosine = -2.0
-        for i in range(num_search):
-            clue_str, dist = closest[i]
-            clue_str = clue_str.lower()
-            clue = clue_str.encode()
-            utils.log(f'Evaluating: {clue_str}, {dist}', logtype=utils.LogTypes.AiDebug)
 
-            for j in range(10):
-                if str(j) in clue_str:
-                    utils.log('  num skipped', logtype=utils.LogTypes.AiDebug)
+        for clue_tags in itertools.product(*clues_tags):
+
+            # clue_vectors = np.asarray(list(clue_vectors))
+            # mean_vector = clue_vectors.mean(axis=0)
+            # v1 = mean_vector.dot(mean_vector)
+            # v2 = np.sqrt(v1)
+            # mean_vector /= v2
+
+            closest = self.model.get_most_similar(clue_tags, num_search)
+
+            for i in range(min(len(closest), num_search)):
+                clue_tag, dist = closest[i]
+                clue_str = self.model.tag_to_string(clue_tag)
+                utils.log(f'Evaluating: {clue_str}, {dist}', logtype=utils.LogTypes.AiDebug)
+
+                if self.allowed_clues and clue_str not in self.allowed_clues:
+                    utils.log('  clue not in allowed clues', logtype=utils.LogTypes.AiDebug)
                     continue
 
-            if clue_str in self.given_clues:
-                utils.log('  already given', logtype=utils.LogTypes.AiDebug)
-                continue
-
-            # clue = self.model.index2word[clue_index]
-            # Ignore clues with the same stem as an illegal clue.
-            if utils.get_stem(clue) in illegal_stems:
-                utils.log('  illegal stem', logtype=utils.LogTypes.AiDebug)
-                continue
-            # Ignore clues that are contained within an illegal clue or
-            # vice versa.
-            contained = False
-            for illegal in illegal_words:
-                if clue_str.replace('_', ' ') in illegal.lower() or illegal.lower() in clue_str.replace('_', ' '):
-                    contained = True
-                    break
-            if contained:
-                utils.log('  illegal contained', logtype=utils.LogTypes.AiDebug)
-                continue
-            # Manual override of clues not to give
-            # TODO: make this not terrible, abstract out to file
-            if clue_str not in self.model:
-                utils.log('  word not in model', logtype=utils.LogTypes.AiDebug)
-                continue
-            else:
-                utils.log('  FOUND IN MODEL', logtype=utils.LogTypes.AiDebug)
-            # Calculate the cosine similarity of this clue with all of the
-            # positive, negative and veto words.
-            clue_vector = self.model[clue_str]
-            clue_cosine = [
-                self.model.similarity(clue_str, word.lower().replace(' ', '_')) for word in clue_words
-            ]
-            pos_cosine = [
-                self.model.similarity(clue_str, word.lower().replace(' ', '_')) for word in pos_words
-            ]
-            neg_cosine = [
-                self.model.similarity(clue_str, word.lower().replace(' ', '_')) for word in neg_words
-            ]
-            neut_cosine = [
-                self.model.similarity(clue_str, word.lower().replace(' ', '_')) for word in neut_words
-            ]
-            veto_cosine = [
-                self.model.similarity(clue_str, word.lower().replace(' ', '_')) for word in veto_words
-            ]
-            # for cosine in (clue_cosine, neg_cosine, veto_cosine):
-            #     print(cosine)
-
-            min_clue_cosine = np.min(clue_cosine)
-
-            # Are all positive words more similar than any negative words?
-            max_neg_cosine = -2.0
-            if list(neg_words):
-                max_neg_cosine = np.max(neg_cosine)
-                if max_neg_cosine >= min_clue_cosine:
+                if re.match(r'[^A-Za-z]', clue_str):
+                    utils.log('  non-alpha skipped', logtype=utils.LogTypes.AiDebug)
                     continue
-            # Are all positive words more similar than any neutral words?
-            max_neut_cosine = -2.0
-            if list(neut_words):
-                max_neut_cosine = np.max(neut_cosine)
-                if max_neut_cosine >= min_clue_cosine:
+
+                if clue_str in self.given_clues:
+                    utils.log('  already given', logtype=utils.LogTypes.AiDebug)
                     continue
-            # Is this word too similar to any of the veto words?
-            max_veto_cosine = -2.0
-            if list(veto_words):
-                max_veto_cosine = np.max(veto_cosine)
-                if max_veto_cosine >= min_clue_cosine - veto_margin:
+
+                # clue = self.model.index2word[clue_index]
+                # Ignore clues with the same stem as an illegal clue.
+                if utils.get_stem(clue_str.encode()) in illegal_stems:
+                    utils.log('  illegal stem', logtype=utils.LogTypes.AiDebug)
                     continue
-            # Check for potential stretch clues
-            stretch_clues = []
-            if give_stretch and list(pos_words):
-                for pos_word in pos_words:
-                    if pos_word in clue_words:
+                # Ignore clues that are contained within an illegal clue or
+                # vice versa.
+                contained = False
+                for illegal in illegal_words:
+                    if clue_str.replace('_', ' ') in illegal.lower() or illegal.lower() in clue_str.replace('_', ' '):
+                        contained = True
+                        break
+                if contained:
+                    utils.log('  illegal contained', logtype=utils.LogTypes.AiDebug)
+                    continue
+                # Manual override of clues not to give
+                # TODO: make this not terrible, abstract out to file
+                # if clue_str not in self.model:
+                #     utils.log('  word not in model', logtype=utils.LogTypes.AiDebug)
+                #     continue
+                # else:
+                #     utils.log('  FOUND IN MODEL', logtype=utils.LogTypes.AiDebug)
+
+                # Calculate the cosine similarity of this clue with all of the
+                # positive, negative and veto words.
+                # clue_vectors = self.model.get_vectors(clue_str)
+
+                clue_cosine = [self.model.similarity(clue_str, word.lower().replace(' ', '_')) for word in clue_words]
+                neg_cosine =  [self.model.similarity(clue_str, word.lower().replace(' ', '_')) for word in neg_words]
+                neut_cosine = [self.model.similarity(clue_str, word.lower().replace(' ', '_')) for word in neut_words]
+                veto_cosine = [self.model.similarity(clue_str, word.lower().replace(' ', '_')) for word in veto_words]
+
+                min_clue_cosine = np.min(clue_cosine)
+
+                # Are all positive words more similar than any negative words?
+                max_neg_cosine = -2.0
+                if list(neg_words):
+                    max_neg_cosine = np.max(neg_cosine)
+                    if max_neg_cosine >= min_clue_cosine:
                         continue
-                    pos_word_sim = self.model.similarity(clue_str, pos_word.lower().replace(' ', '_'))
-                    if pos_word_sim > max_neg_cosine and pos_word_sim > max_veto_cosine + veto_margin:
-                        stretch_clues.append(pos_word)
-            # Is this closer to all of the positive words than our previous best?
-            min_clue_cosine *= pow(stretch_mult, len(stretch_clues))
-            if min_clue_cosine < max_min_cosine:
-                continue
-            # If we get here, we have a new best clue.
-            max_min_cosine = min_clue_cosine
-            best_clue = clue
-            best_stretch = stretch_clues
+                # Are all positive words more similar than any neutral words?
+                max_neut_cosine = -2.0
+                if list(neut_words):
+                    max_neut_cosine = np.max(neut_cosine)
+                    if max_neut_cosine >= min_clue_cosine:
+                        continue
+                # Is this word too similar to any of the veto words?
+                max_veto_cosine = -2.0
+                if list(veto_words):
+                    max_veto_cosine = np.max(veto_cosine)
+                    if max_veto_cosine >= min_clue_cosine - veto_margin:
+                        continue
+                # Check for potential stretch clues
+                stretch_clues = []
+                if give_stretch and list(pos_words):
+                    for pos_word in pos_words:
+                        if pos_word in clue_words:
+                            continue
+                        pos_word_sim = self.model.similarity(clue_str, pos_word.lower().replace(' ', '_'))
+                        if pos_word_sim > max_neg_cosine and pos_word_sim > max_veto_cosine + veto_margin:
+                            stretch_clues.append(pos_word)
+                # Is this closer to all of the positive words than our previous best?
+                min_clue_cosine *= pow(stretch_mult, len(stretch_clues))
+                if min_clue_cosine < max_min_cosine:
+                    continue
+                # If we get here, we have a new best clue.
+                max_min_cosine = min_clue_cosine
+                best_clue = clue_str
+                best_stretch = stretch_clues
 
         return best_clue, max_min_cosine, best_stretch
